@@ -30,37 +30,42 @@ from .exceptions import *
 
 
 class GuessAttempt(object):
-    def __init__(self, guess_char, hit=None, miss=None):
-        self.guess = guess_char
+    def __init__(self, character, hit=None, miss=None):
+        self.character = character
         self.hit = hit
         self.miss = miss
-        self.miss_counter = 0
 
         if self.hit and self.miss:
-            raise InvalidGuessAttempt
+            raise InvalidGuessAttempt("Can't be both hit and miss")
 
-    
     def is_hit(self):
-        if self.hit and not self.miss:
-            return True
-        if self.hit and self.miss:
-            raise InvalidGuessAttempt
-        else:
-            return False
+        return bool(self.hit)
     
     def is_miss(self):
-        if self.miss and not self.hit:
-            self.miss_counter += 1
-            return True
-        if self.miss and self.hit:
-            raise InvalidGuessAttempt
-        else:
-            return False
+        return bool(self.miss)
         
     
 class GuessWord(object):
-    def __init__(self):
-        pass
+    def __init__(self, word):
+        if not word:
+            raise InvalidWordException()
+       
+        self.answer = word.lower()
+        self.mask_char = "*"
+        self.masked = len(self.answer) * self.mask_char
+        self.previous_guesses = []
+        self.miss_count = 0
+
+    def perform_attempt(self,character):
+        self.previous_guesses.append(character.lower())
+        if len(character) != 1:
+            raise InvalidGuessedLetterException()
+        if character.lower() not in self.answer:
+            return GuessAttempt(character, miss=True)
+            
+        self.reveal = "".join([character if character in self.previous_guesses else self.mask_char for character in self.answer.lower()])
+        self.masked = self.reveal
+        return GuessAttempt(character, hit=True)
 
 class HangmanGame(object):
     def __init__(self):
@@ -75,7 +80,7 @@ class HangmanGame(object):
 >throughout, we need to check end game conditions: win if the answer has been solved, or lose if guess count limit has been hit
 
 
-g = HangmanGame(number_of_guesses=10)
+g = HangmanGame(guess_limit=10)
 
 print(g.select_random_word(['a','b','c','d','e']))
 '''
