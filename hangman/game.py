@@ -1,69 +1,37 @@
+
 import random
 from .exceptions import *
 
-# class InvalidListOfWordsException(Exception):
-#     pass
-
-
-# class InvalidWordException(Exception):
-#     pass
-
-
-# class GameWonException(Exception):
-#     pass
-
-
-# class GameLostException(Exception):
-#     pass
-
-
-# class GameFinishedException(Exception):
-#     pass
-
-
-# class InvalidGuessedLetterException(Exception):
-#     pass
-
-
-# class InvalidGuessAttempt(Exception):
-#     pass
-
 
 class GuessAttempt(object):
-    def __init__(self, character, hit=None, miss=None):
-        self.character = character
-        self.hit = hit
-        self.miss = miss
-
-        if self.hit and self.miss:
+    def __init__(self, character, miss=None, hit=None):
+        if all([miss, hit]):
             raise InvalidGuessAttempt("Can't be both hit and miss")
+
+        self.character = character
+        self.miss = miss
+        self.hit = hit
 
     def is_hit(self):
         return bool(self.hit)
-    
+
     def is_miss(self):
         return bool(self.miss)
-        
-    
+
+
 class GuessWord(object):
     def __init__(self, word):
         if not word:
             raise InvalidWordException()
-       
         self.answer = word.lower()
-        self.mask_char = "*"
-        self.masked = len(self.answer) * self.mask_char
-        # self.previous_guesses = []
-        # self.miss_count = 0
+        self.masked = self._mask_word(self.answer)
 
-    def perform_attempt(self,character):
-        if len(character) != 1:
+    def perform_attempt(self, character):
+        if len(character) > 1:
             raise InvalidGuessedLetterException()
+
         if character.lower() not in self.answer:
             return GuessAttempt(character, miss=True)
-            
-        # reveal = "".join([character if character in self.previous_guesses else self.mask_char for character in self.answer])
-        # self.masked = reveal
 
         new_word = ''
 
@@ -72,69 +40,58 @@ class GuessWord(object):
                 new_word += answer_char
             else:
                 new_word += masked_char
+
+        self.masked = new_word
+
         return GuessAttempt(character, hit=True)
+
+    @classmethod
+    def _mask_word(cls, word):
+        return '*' * len(word)
+
 
 class HangmanGame(object):
     WORD_LIST = ['rmotr', 'python', 'awesome']
-    
-    def __init__(self, word_list=None,number_of_guesses=5):
+
+    def __init__(self, word_list=None, number_of_guesses=5):
         if not word_list:
             word_list = self.WORD_LIST
-        self.number_of_guesses = number_of_guesses
-        self.previous_guesses = []
-        self.miss_count = 0
-        self.remaining_misses = self.number_of_guesses - self.miss_count
         self.word = GuessWord(self.select_random_word(word_list))
-    
+        self.remaining_misses = number_of_guesses
+        self.previous_guesses = []
+
     def is_won(self):
         return self.word.masked == self.word.answer
-        
+
     def is_lost(self):
         return self.remaining_misses == 0
-    
+
     def is_finished(self):
         return self.is_won() or self.is_lost()
-    
-    def guess(self,character):
+
+    def guess(self, character):
         character = character.lower()
         if character in self.previous_guesses:
             raise InvalidGuessedLetterException()
-        
+
         if self.is_finished():
-            raise GameFinishedException
-        
+            raise GameFinishedException()
+
         self.previous_guesses.append(character)
         attempt = self.word.perform_attempt(character)
-        
         if attempt.is_miss():
             self.remaining_misses -= 1
-            
+
         if self.is_won():
-            raise GameWonException
-            
+            raise GameWonException()
+
         if self.is_lost():
-            raise GameLostException
-        
+            raise GameLostException()
+
         return attempt
-        
+
     @classmethod
     def select_random_word(cls, word_list):
         if not word_list:
             raise InvalidListOfWordsException()
         return random.choice(word_list)
-
-        
-  
-'''
->we need to create an answer word to guess, from either user input or default list
->we need to mask that word as the answer
->we need to set number of guesses allowed, from default or user input
->we need to match the character of user guess against the answer word, and generate either a hit or a miss, as well as decrement guess counter
->if a hit, we need to reveal that letter at all locations in the answer word
->throughout, we need to check end game conditions: win if the answer has been solved, or lose if guess count limit has been hit
-
-
-g = HangmanGame(guess_limit=10)
-
-print(g.select_random_word(['a','b','c','d','e']))
-'''
